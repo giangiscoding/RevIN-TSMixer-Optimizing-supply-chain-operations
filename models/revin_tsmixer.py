@@ -5,9 +5,7 @@ from .mixer_layers import TSMixerLayer
 
 class RevINTSMixer(nn.Module):
     def __init__(self, seq_len, pred_len, num_features, n_block, ff_dim, dropout):
-        """
-        Algorithm 4: RevIN-TSMixer Model
-        """
+
         super(RevINTSMixer, self).__init__()
         
         self.revin = RevIN(num_features, affine=True)

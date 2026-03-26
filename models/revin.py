@@ -3,9 +3,7 @@ import torch.nn as nn
 
 class RevIN(nn.Module):
     def __init__(self, num_features, eps=1e-5, affine=True):
-        """
-        Algorithm 2 & 3: Reversible Instance Normalization
-        """
+
         super(RevIN, self).__init__()
         self.eps = eps
         self.affine = affine

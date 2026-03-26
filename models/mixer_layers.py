@@ -23,14 +23,14 @@ class TSMixerLayer(nn.Module):
         )
 
     def forward(self, x):
-        # 1. Time Mixing (Algorithm 1 - Bước 4)
+        # 1. Time Mixing
         res = x
         x = x.transpose(1, 2) # [B, C, T]
         x = self.temporal_mlp(x)
         x = x.transpose(1, 2) # [B, T, C]
         x = x + res # Residual connection
         
-        # 2. Feature Mixing (Algorithm 1 - Bước 5)
+        # 2. Feature Mixing
         res = x
         x = self.feature_mlp(x)
         x = x + res # Residual connection
