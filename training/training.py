@@ -23,7 +23,6 @@ def create_sequences(data, seq_len, pred_len, target_idx=0):
         y.append(data[i + seq_len : i + seq_len + pred_len, target_idx]) 
     return np.array(X), np.array(y)
 
-# 1. HÀM LOSS CHO SCENARIO 1 (MAPE)
 class MAPELoss(nn.Module):
     def __init__(self, eps=1e-5):
         super(MAPELoss, self).__init__()
@@ -31,9 +30,8 @@ class MAPELoss(nn.Module):
     def forward(self, pred, target):
         return torch.mean(torch.abs((target - pred) / (torch.abs(target) + self.eps))) * 100
 
-# 4. HÀM TRAIN HOÀN CHỈNH
 def train_model(model, train_loader, val_loader, test_loader, epochs, lr, device='gpu', scenario=1,h=2, L=2, o=50000,cs_steps=100):
-    criterion = nn.L1Loss() # Hoặc MAPELoss() tùy bạn chọn
+    criterion = nn.L1Loss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     patience_limit = 30 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20)
@@ -46,11 +44,9 @@ def train_model(model, train_loader, val_loader, test_loader, epochs, lr, device
     for epoch in range(epochs):
         model.train()
         for batch_x, batch_y in train_loader:
-            # 1. Lan truyền xuôi & tính Loss truyền thống
             output = model(batch_x.to(device))
             loss = criterion(output[:, :, 0], batch_y.to(device))
             
-            # 2. Cập nhật trọng số mạng nơ-ron
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -117,9 +113,10 @@ def train_model(model, train_loader, val_loader, test_loader, epochs, lr, device
     test_preds_flat = test_preds_tensor.flatten()
     test_trues_flat = test_trues_tensor.flatten()
     test_mape = torch.mean(torch.abs((test_trues_flat - test_preds_flat) / (test_trues_flat + 1e-5))).item() * 100
-    
+    test_mse = torch.mean((test_trues_flat - test_preds_flat)**2).item()
+    test_mae = torch.mean(torch.abs(test_trues_flat - test_preds_flat)).item()
     print("-" * 30)
-    print(f"Test MAPE: {test_mape:.2f}% | Test TC: {test_tc:,.0f}")
+    print(f"Test MSE: {test_mse} | Test MAE: {test_mae} | Test MAPE: {test_mape:.2f}% | Test TC: {test_tc:,.0f}")
     print(f"Optimal Shortage Cost (cs) found: {test_cs:.2f}")
     print("-" * 30 + "\n")
     return model

@@ -21,13 +21,10 @@ class Inventory_model(nn.Module):
         
         q_star = torch.sqrt((2 * mu_D * self.o) / self.h)
         
-        # 1. Tính alpha gốc chưa qua chỉnh sửa
         alpha_raw = 1.0 - (self.h * q_star) / (cs_device * mu_D)
         
-        # 2. TẠO BỨC TƯỜNG CHẶN: Đánh dấu các kịch bản hợp lệ (alpha > 0.001)
         valid_mask = alpha_raw > 0.001
         
-        # Vẫn dùng clamp để Pytorch không báo lỗi NaN khi tính z_score phía dưới
         alpha = torch.clamp(alpha_raw, min=1e-4, max=0.9999) 
         
         z_alpha = self.normal.icdf(alpha)
@@ -45,10 +42,8 @@ class Inventory_model(nn.Module):
         
         tc = c_o + c_h + E_cs
         
-        # 3. XÂY VÁCH ĐÁ: Nếu alpha không hợp lệ, ép TC bằng VÔ CỰC (Infinity)
         tc = torch.where(valid_mask, tc, torch.tensor(float('inf'), device=tc.device))
         
-        # 4. Tối ưu: Lúc này torch.min chắc chắn sẽ chọn đúng đáy chữ U (quanh 1.54)
         best_tc, best_idx = torch.min(tc, dim=0)
         best_cs_vals = cs_device[best_idx].squeeze()
         
