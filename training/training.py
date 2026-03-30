@@ -1,12 +1,10 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
+import torch.optim
 import numpy as np
 import copy
 import random
 import math
-import scipy.stats as stats
-from torch.distributions import Normal
 from models.inventory_model import Inventory_model
 
 def set_seed(seed=42):
@@ -23,18 +21,10 @@ def create_sequences(data, seq_len, pred_len, target_idx=0):
         y.append(data[i + seq_len : i + seq_len + pred_len, target_idx]) 
     return np.array(X), np.array(y)
 
-class MAPELoss(nn.Module):
-    def __init__(self, eps=1e-5):
-        super(MAPELoss, self).__init__()
-        self.eps = eps
-    def forward(self, pred, target):
-        return torch.mean(torch.abs((target - pred) / (torch.abs(target) + self.eps))) * 100
-
-def train_model(model, train_loader, val_loader, test_loader, epochs, lr, device='gpu', scenario=1,h=2, L=2, o=50000,cs_steps=100):
-    criterion = nn.L1Loss()
+def train_model(model, train_loader, val_loader, test_loader, epochs, lr, device='cuda', scenario=1,h=2, L=2, o=50000,cs_steps=100):
+    criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    patience_limit = 30 
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20)
+    patience_limit = 30
     tc_calculate = Inventory_model(h,L,o,cs_steps)
     model.to(device)
     best_val_score = float('inf') 
@@ -61,9 +51,6 @@ def train_model(model, train_loader, val_loader, test_loader, epochs, lr, device
         val_preds_tensor = torch.cat(val_preds, dim=0)
         val_trues_tensor = torch.cat(val_trues, dim=0)
         val_preds_tensor = torch.clamp(val_preds_tensor, min=0.0)
-        
-        val_tc_tensor, val_cs = tc_calculate(val_preds_tensor, val_trues_tensor)
-        val_tc = val_tc_tensor.item()
         val_preds_flat = val_preds_tensor.flatten()
         val_trues_flat = val_trues_tensor.flatten()
         val_mse_prev = 1e+20
@@ -74,8 +61,14 @@ def train_model(model, train_loader, val_loader, test_loader, epochs, lr, device
         
         if scenario == 1:
             current_score = val_mape
+            if (epoch + 1) % 10 == 0:
+                print(f"Epoch {epoch+1:03d} | MSE: {val_mse:.4f} | MAE: {val_mae:.4f} | RMSE: {val_rmse:.4f} | MAPE: {val_mape:.2f}%")
         else:
+            val_tc_tensor, val_cs = tc_calculate(val_preds_tensor, val_trues_tensor)
+            val_tc = val_tc_tensor.item()
             current_score = val_tc
+            if (epoch + 1) % 10 == 0:
+                print(f"Epoch {epoch+1:03d} | MSE: {val_mse:.4f} | MAE: {val_mae:.4f} | RMSE: {val_rmse:.4f} | MAPE: {val_mape:.2f}% | Val TC: {val_tc:,.0f}| Opt cs: {val_cs:.2f}")
         
         if current_score < best_val_score:
             best_val_score = current_score
@@ -85,12 +78,6 @@ def train_model(model, train_loader, val_loader, test_loader, epochs, lr, device
             no_improve = 0
         else:
             no_improve += 1
-            
-        scheduler.step(current_score)
-        
-        if (epoch + 1) % 10 == 0:
-            print(f"Epoch {epoch+1:03d} | MSE: {val_mse:.4f} | MAE: {val_mae:.4f} | RMSE: {val_rmse:.4f} | MAPE: {val_mape:.2f}% | Val TC: {val_tc:,.0f}| Opt cs: {val_cs:.2f}")
-        
         if no_improve >= patience_limit:
             print(f"Early Stopping tại epoch {epoch+1}")
             break

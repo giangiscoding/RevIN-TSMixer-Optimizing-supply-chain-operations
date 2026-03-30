@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 from .revin import RevIN
 from .mixer_layers import TSMixerLayer
