@@ -35,8 +35,8 @@ class MAPELoss(nn.Module):
 def train_model(model, train_loader, val_loader, test_loader, epochs, lr, device='gpu', scenario=1,h=2, L=2, o=50000,cs_steps=100):
     criterion = nn.L1Loss() # Hoặc MAPELoss() tùy bạn chọn
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    patience_limit = 35 if scenario == 1 else 35 
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=15)
+    patience_limit = 30 
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20)
     tc_calculate = Inventory_model(h,L,o,cs_steps)
     model.to(device)
     best_val_score = float('inf') 
@@ -70,7 +70,7 @@ def train_model(model, train_loader, val_loader, test_loader, epochs, lr, device
         val_tc = val_tc_tensor.item()
         val_preds_flat = val_preds_tensor.flatten()
         val_trues_flat = val_trues_tensor.flatten()
-        
+        val_mse_prev = 1e+20
         val_mse = torch.mean((val_trues_flat - val_preds_flat)**2).item()
         val_mae = torch.mean(torch.abs(val_trues_flat - val_preds_flat)).item()
         val_rmse = math.sqrt(val_mse)
@@ -84,6 +84,8 @@ def train_model(model, train_loader, val_loader, test_loader, epochs, lr, device
         if current_score < best_val_score:
             best_val_score = current_score
             best_model_wts = copy.deepcopy(model.state_dict())
+
+        if val_mse < val_mse_prev:
             no_improve = 0
         else:
             no_improve += 1
@@ -118,6 +120,6 @@ def train_model(model, train_loader, val_loader, test_loader, epochs, lr, device
     
     print("-" * 30)
     print(f"Test MAPE: {test_mape:.2f}% | Test TC: {test_tc:,.0f}")
-    print(f"🎯 Optimal Shortage Cost (cs) found: {test_cs:.2f}")
+    print(f"Optimal Shortage Cost (cs) found: {test_cs:.2f}")
     print("-" * 30 + "\n")
     return model

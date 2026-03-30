@@ -59,7 +59,7 @@ def main():
     print("MÔ HÌNH 1 - SCENARIO 1 (Loss: MAPE)")
     print("-"*50)
     # Cấu hình từ Table 8: seq_len = 6, n_block = 1, batch_size = 4
-    s1_seq_len, s1_n_block, s1_batch_size = 6, 1, 4
+    s1_seq_len, s1_n_block, s1_batch_size = 9, 2, 2
     train_loader_s1, val_loader_s1, test_loader_s1 = get_dataloaders(s1_seq_len, s1_batch_size)
     model_s1 = RevIN_TSMixer(s1_seq_len, pred_len, num_features, ff_dim, s1_n_block, dropout)
     train_model(model_s1, train_loader_s1, val_loader_s1, test_loader_s1, epochs, learning_rate, device, scenario=1,h=2, L=2, o=50000,cs_steps=100)
