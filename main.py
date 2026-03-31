@@ -50,18 +50,13 @@ def main():
         test_loader = DataLoader(TensorDataset(X_test, y_test), batch_size=batch_size, shuffle=False)
         
         return train_loader, val_loader, test_loader
-
-    print("\n" + "-"*50)
-    print("MÔ HÌNH 1 - SCENARIO 1 (Loss: MAPE)")
-    print("-"*50)
+    print("MÔ HÌNH 1 - SCENARIO 1 (Optimize: MAPE)")
     s1_seq_len, s1_n_block, s1_batch_size = 9, 2, 2
     train_loader_s1, val_loader_s1, test_loader_s1 = get_dataloaders(s1_seq_len, s1_batch_size)
     model_s1 = RevIN_TSMixer(s1_seq_len, pred_len, num_features, ff_dim, s1_n_block, dropout)
     train_model(model_s1, train_loader_s1, val_loader_s1, test_loader_s1, epochs, learning_rate, device, scenario=1,h=2, L=2, o=50000,cs_steps=100)
 
-    print("\n" + "="*50)
-    print("MÔ HÌNH 2 - SCENARIO 2 (Loss: Total Inventory Cost)")
-    print("="*50)
+    print("MÔ HÌNH 2 - SCENARIO 2 (Optimize: Total Inventory Cost)")
     s2_seq_len, s2_n_block, s2_batch_size = 9, 2, 2
     train_loader_s2, val_loader_s2, test_loader_s2 = get_dataloaders(s2_seq_len, s2_batch_size)
     
