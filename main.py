@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 import pandas as pd
 from models.revin_tsmixer import RevIN_TSMixer
-from training.training import set_seed, train_model, create_sequences
+from train.trainer import set_seed, train_model, create_sequences
 
 
 def main():
@@ -28,7 +28,7 @@ def main():
     ff_dim = 128
     dropout = 0.1
     learning_rate = 1e-4
-    epochs = 100
+    epochs = 50
 
     def get_dataloaders(seq_len, batch_size):
         X, y = create_sequences(real_data, seq_len, pred_len, target_idx=0)
