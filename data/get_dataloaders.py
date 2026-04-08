@@ -2,8 +2,8 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 from train.trainer import create_sequences
 
-def get_dataloaders(seq_len, batch_size, real_data, pred_len):
-    X, y = create_sequences(real_data, seq_len, pred_len, target_idx=0)
+def get_dataloaders(seq_len, batch_size, real_data, pred_len, target_idx=0):
+    X, y = create_sequences(real_data, seq_len, pred_len, target_idx=target_idx)
         
     train_end = int(len(X) * 0.8)
     val_end = int(len(X) * 0.9)
@@ -22,3 +22,4 @@ def get_dataloaders(seq_len, batch_size, real_data, pred_len):
     test_loader = DataLoader(TensorDataset(X_test, y_test), batch_size=batch_size, shuffle=False)
         
     return train_loader, val_loader, test_loader
+# ================================================

@@ -1,19 +1,18 @@
 import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 import pandas as pd
 import itertools
 from sklearn.preprocessing import StandardScaler
-from train.trainer import train_model, set_seed, create_sequences
+from train.trainer import train_model, set_seed
 from models.revin_tsmixer import RevIN_TSMixer
+from data.get_dataloaders import get_dataloaders
 
 def main():
     set_seed(42)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f"Đang chạy trên thiết bị: {device}")
 
+    # 1. TẢI VÀ CHUẨN BỊ DỮ LIỆU
     csv_path = 'data/data_TSI_v2.csv'
     print(f"Đang tải dữ liệu từ {csv_path}...")
     
@@ -32,9 +31,11 @@ def main():
     pred_len = 3
     num_features = raw_data.shape[1] 
     
+    # Chuẩn hóa dữ liệu
     scaler = StandardScaler()
     data_scaled = scaler.fit_transform(raw_data)
     
+    # 2. KHÔNG GIAN GRID SEARCH
     param_grid = {
         'seq_len': [6, 9],
         'n_block': [1, 2],
@@ -48,32 +49,20 @@ def main():
     combinations = [dict(zip(keys, v)) for v in itertools.product(*values)]
     print(f"Tổng số cấu hình Grid Search: {len(combinations)} tổ hợp\n")
 
-    # BIẾN LƯU KỶ LỤC KỊCH BẢN 1 (MIN MAPE)
-    best_s1_params = None
-    best_global_val_mape = float('inf')
-    best_global_test_mape = float('inf')
+    best_s1_params, best_global_val_mape, best_global_test_mape = None, float('inf'), float('inf')
+    best_s2_params, best_global_val_tc, best_global_test_tc = None, float('inf'), float('inf')
 
-    # BIẾN LƯU KỶ LỤC KỊCH BẢN 2 (MIN TOTAL COST)
-    best_s2_params = None
-    best_global_val_tc = float('inf')
-    best_global_test_tc = float('inf')
-
+    # 3. VÒNG LẶP GRID SEARCH
     for i, params in enumerate(combinations):
         print(f"[{i+1}/{len(combinations)}] Đang thử nghiệm: {params}")
         
-        seq_len = params['seq_len']
-        X, y = create_sequences(data_scaled, seq_len=seq_len, pred_len=pred_len, target_idx=target_idx)
-        
-        train_size = int(len(X) * 0.8)
-        val_size = int(len(X) * 0.1)
-        
-        X_train, y_train = X[:train_size], y[:train_size]
-        X_val, y_val = X[train_size:train_size+val_size], y[train_size:train_size+val_size]
-        X_test, y_test = X[train_size+val_size:], y[train_size+val_size:]
-        
-        train_loader = DataLoader(TensorDataset(torch.tensor(X_train, dtype=torch.float32), torch.tensor(y_train, dtype=torch.float32)), batch_size=params['batch_size'], shuffle=True)
-        val_loader = DataLoader(TensorDataset(torch.tensor(X_val, dtype=torch.float32), torch.tensor(y_val, dtype=torch.float32)), batch_size=params['batch_size'], shuffle=False)
-        test_loader = DataLoader(TensorDataset(torch.tensor(X_test, dtype=torch.float32), torch.tensor(y_test, dtype=torch.float32)), batch_size=params['batch_size'], shuffle=False)
+        train_loader, val_loader, test_loader = get_dataloaders(
+            seq_len=params['seq_len'],
+            batch_size=params['batch_size'],
+            real_data=data_scaled,
+            pred_len=pred_len,
+            target_idx=target_idx
+        )
         
         model = RevIN_TSMixer(
             seq_len=params['seq_len'],
@@ -94,18 +83,14 @@ def main():
             print(f"  -> [S1 - MAPE] Val: {val_mape:.2f}% | Test: {test_mape:.2f}%")
             print(f"  -> [S2 - Cost] Val: {val_tc:,.0f}   | Test: {test_tc:,.0f}")
 
-            # Đánh giá Kịch bản 1
+            # Lưu Kỷ lục Kịch bản 1
             if val_mape < best_global_val_mape:
-                best_global_val_mape = val_mape
-                best_global_test_mape = test_mape
-                best_s1_params = params
+                best_global_val_mape, best_global_test_mape, best_s1_params = val_mape, test_mape, params
                 print(f"S1: KỶ LỤC MAPE MỚI!")
 
-            # Đánh giá Kịch bản 2
+            # Lưu Kỷ lục Kịch bản 2
             if val_tc < best_global_val_tc:
-                best_global_val_tc = val_tc
-                best_global_test_tc = test_tc
-                best_s2_params = params
+                best_global_val_tc, best_global_test_tc, best_s2_params = val_tc, test_tc, params
                 print(f"S2: KỶ LỤC TOTAL COST MỚI!")
                 
         except Exception as e:
@@ -116,12 +101,12 @@ def main():
     print("TỔNG KẾT GRID SEARCH THEO 2 KỊCH BẢN TỪ BÀI BÁO")
     print("="*55)
     print("KỊCH BẢN 1: TỐI ƯU HÓA SAI SỐ (MIN MAPE)")
-    print(f"Cấu hình tối ưu   : {best_s1_params}")
+    print(f"Cấu hình tối ưu  : {best_s1_params}")
     print(f"Validation MAPE  : {best_global_val_mape:.2f}%")
     print(f"Test MAPE        : {best_global_test_mape:.2f}%")
     print("-" * 55)
     print("KỊCH BẢN 2: TỐI ƯU HÓA CHI PHÍ (MIN TOTAL COST)")
-    print(f"Cấu hình tối ưu   : {best_s2_params}")
+    print(f"Cấu hình tối ưu  : {best_s2_params}")
     print(f"Validation Cost  : {best_global_val_tc:,.0f}")
     print(f"Test Cost        : {best_global_test_tc:,.0f}")
     print("="*55)
