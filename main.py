@@ -79,7 +79,7 @@ def make_objective(scenario, raw_data, pred_len, num_features, target_idx, devic
                 train_loader=train_loader,
                 val_loader=val_loader,
                 test_loader=test_loader,
-                epochs=50,
+                epochs=100,
                 lr=params['learning_rate'],
                 device=device,
                 target_idx=target_idx,
@@ -108,21 +108,14 @@ def run_study(scenario, raw_data, pred_len, num_features,
     Chạy Optuna study cho một scenario.
     Trả về best_params, best_val, best_test_mape, best_test_tc, study.
     """
-    scenario_label = "1 – Min MAPE" if scenario == 's1' else "2 – Min Total Cost"
+    scenario_label = "1 - Min MAPE" if scenario == 's1' else "2 - Min Total Cost"
     metric_name    = "MAPE" if scenario == 's1' else "Total Cost"
 
     print(f"\n{'='*60}")
-    print(f"Optuna TPE – Scenario {scenario_label}")
+    print(f"Optuna TPE - Scenario {scenario_label}")
     print(f"Số trials: {n_trials}  |  Startup (random): 10")
     print(f"{'='*60}")
 
-    # ================================================================
-    # TPESampler:
-    # - n_startup_trials=10: 10 trial đầu chạy random để khởi động
-    # - multivariate=True  : học tương quan giữa các hyperparameter,
-    #   ví dụ ff_dim lớn thường cần lr nhỏ hơn để ổn định
-    # - seed               : đảm bảo reproducibility
-    # ================================================================
     sampler = TPESampler(
         seed=seed,
         n_startup_trials=10,
@@ -185,7 +178,7 @@ def print_top5(study, scenario):
         key=lambda t: t.value
     )[:5]
 
-    print(f"\nTop 5 trials – Scenario {'1' if scenario=='s1' else '2'}:")
+    print(f"\nTop 5 trials - Scenario {'1' if scenario=='s1' else '2'}:")
     for t in trials:
         p    = t.user_attrs.get('params', {})
         tval = t.user_attrs.get(test_key, float('nan'))
